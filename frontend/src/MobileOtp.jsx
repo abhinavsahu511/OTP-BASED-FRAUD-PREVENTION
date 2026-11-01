@@ -86,73 +86,76 @@ const MobileOtp = () => {
   const params = new URLSearchParams(window.location.search);
   const urlCode = params.get('code');
 
-  const [otp, setOtp] = useState(urlCode || null);
+  const [otp, setOtp] = useState(null);
   const [coords, setCoords] = useState(null);
-  const [status, setStatus] = useState('Verifying your mobile GPS location...');
+  const [status, setStatus] = useState('Acquiring high-accuracy mobile GPS location...');
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const loadOtp = async () => {
-      try {
-        const latestOtp = await readLatestOtp();
-        if (latestOtp) {
-          setOtp(latestOtp);
-        }
-      } catch (err) {
-        console.error('Error reading OTP from Firebase:', err);
-      }
-    };
-
-    const saveLocationToFirebase = async (latitude, longitude) => {
-      setCoords({ latitude, longitude });
+    const verifyLocationAndUnlockOtp = async (latitude, longitude, accuracy) => {
+      setCoords({ latitude, longitude, accuracy });
       try {
         const locationPayload = {
           latitude,
           longitude,
+          accuracy: accuracy || null,
           timestamp: serverTimestamp(),
         };
         await setDoc(doc(db, 'locations', 'latest'), locationPayload);
         await addDoc(collection(db, 'locations'), locationPayload);
+
+        const latestOtp = await readLatestOtp();
+        setOtp(latestOtp || urlCode);
         setError(false);
         setStatus(
           'Mobile GPS location verified! Type this 4-digit OTP into your laptop browser to finish payment.'
         );
       } catch (err) {
-        console.error('Error saving location to Firebase:', err);
+        console.error('Error communicating with Firebase:', err);
+        if (urlCode) setOtp(urlCode);
+        setError(true);
+        setStatus('Failed to sync location with database.');
       }
     };
 
-    const fallbackIpLocation = async () => {
-      try {
-        const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
-        const data = await res.json();
-        if (data.latitude && data.longitude) {
-          await saveLocationToFirebase(Number(data.latitude), Number(data.longitude));
-          return;
-        }
-      } catch (err) {
-        console.error('Mobile IP location fallback error:', err);
-      }
+    if (!navigator.geolocation) {
       setError(true);
-      setStatus('Please turn on Location on your phone and refresh this page.');
-    };
-
-    loadOtp();
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          saveLocationToFirebase(position.coords.latitude, position.coords.longitude);
-        },
-        () => {
-          fallbackIpLocation();
-        },
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-      );
-    } else {
-      fallbackIpLocation();
+      setStatus('Hardware Geolocation is not supported by your mobile browser.');
+      return;
     }
-  }, []);
+
+    // Stage 1: High-accuracy hardware GPS (satellite + Wi-Fi sensors, no cached position)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        verifyLocationAndUnlockOtp(
+          position.coords.latitude,
+          position.coords.longitude,
+          position.coords.accuracy
+        );
+      },
+      () => {
+        // Stage 2: Indoor cellular/Wi-Fi triangulation via W3C Geolocation API (never IP lookup)
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            verifyLocationAndUnlockOtp(
+              pos.coords.latitude,
+              pos.coords.longitude,
+              pos.coords.accuracy
+            );
+          },
+          (geoErr) => {
+            console.error('Geolocation error:', geoErr);
+            setError(true);
+            setStatus(
+              'Location permission denied. You must allow GPS Location access on your phone to unlock your OTP.'
+            );
+          },
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  }, [urlCode]);
 
   return (
     <Container>
