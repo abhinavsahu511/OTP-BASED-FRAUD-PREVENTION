@@ -4,16 +4,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/backend/server.js"
+      "destination": "/api/send-message.js"
     },
     {
-      "source": "/send-message",
-      "destination": "/backend/server.js"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
 }
-
