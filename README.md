@@ -104,14 +104,17 @@ otp_based_fraud_prevention_secure-master/
 │       ├── PinPage.jsx         # Laptop Geo-OTP Verification & Haversine Check
 │       ├── MobileOtp.jsx       # Mobile Phone GPS Capture & OTP Display Page
 │       ├── Result.jsx          # Transaction Receipt & Fraud Status Page
-│       ├── firebaseconfig.js   # Firebase App & Firestore Initialization
+│       ├── firebaseconfig.js   # Firebase App & Firestore Initialization (via Env Variables)
 │       ├── StoreData.js        # Stores Generated OTP in Firestore (otpcollector)
 │       ├── ReadOtp.js          # Reads Latest OTP from Firestore
 │       └── ReadLatestData.js   # Reads Latest Mobile GPS Coordinates from Firestore (locations)
 │
 ├── backend/                    # Node.js + Express Backend Server
 │   ├── server.js               # Express Server & Twilio SMS Dispatch Endpoint (/send-message)
-│   └── .env                    # Environment Variables (Twilio Credentials & Port)
+│   └── .env                    # Environment Variables (Twilio & Firebase Credentials)
+│
+├── api/                        # Vercel Serverless Function Entrypoint
+│   └── send-message.js         # Exports Express Backend for Cloud Deployment
 │
 ├── public/                     # Static Assets, Diagrams & Screenshots
 │   ├── success.gif             # Success Animation
@@ -137,19 +140,24 @@ otp_based_fraud_prevention_secure-master/
 npm install
 ```
 
-### 2. Configure Environment Variables
-Create a `backend/.env` file with your Twilio credentials:
+### 2. Configure Environment Variables (`backend/.env`)
+Create a `backend/.env` file with your Twilio and Firebase credentials:
 ```env
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=+1xxxxxxxxxx
 PORT=8000
+
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ```
 
-### 3. Configure Firebase Firestore
-Update [`frontend/src/firebaseconfig.js`](./frontend/src/firebaseconfig.js) with your Firebase project configuration and enable **Cloud Firestore** in your Firebase Console.
-
-### 4. Run the Project (Open 2 Terminals)
+### 3. Run the Project (Open 2 Terminals)
 
 **Terminal 1 — Start the Frontend (Vite on Port `3000`):**
 ```bash
@@ -167,8 +175,8 @@ Open **http://localhost:3000/** in your browser to use the application!
 
 ## ☁️ Deploying to Vercel
 
-This project includes [`vercel.json`](./vercel.json) to deploy both the React frontend and Express backend together:
-1. Push the repository to GitHub.
+This project includes [`vercel.json`](./vercel.json) and [`api/send-message.js`](./api/send-message.js) to deploy both the React frontend and Express backend together:
+1. Push the repository to GitHub (`git push origin main`).
 2. Import the repository on [Vercel](https://vercel.com).
-3. Add `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_PHONE_NUMBER` under **Environment Variables**.
+3. Under **Environment Variables**, paste the contents of your `backend/.env` file (`TWILIO_*` and `VITE_FIREBASE_*` keys).
 4. Click **Deploy**.
