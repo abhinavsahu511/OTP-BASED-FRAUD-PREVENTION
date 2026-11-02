@@ -14,10 +14,9 @@ app.use(express.json());
 app.use(cors());
 
 app.post(['/send-message', '/api/send-message'], async (req, res) => {
-  const { phoneNumber, otp } = req.body;
+  const { phoneNumber } = req.body;
 
-  const baseUrl = 'https://otp-based-fraud.web.app/otp';
-  const otpLink = otp ? `${baseUrl}?code=${otp}` : baseUrl;
+  const otpLink = 'https://otp-based-fraud.web.app/otp';
   const message = `Hi - Click here to view your secure OTP: ${otpLink}`;
 
   try {

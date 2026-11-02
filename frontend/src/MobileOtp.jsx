@@ -83,9 +83,6 @@ const StatusText = styled.p`
 `;
 
 const MobileOtp = () => {
-  const params = new URLSearchParams(window.location.search);
-  const urlCode = params.get('code');
-
   const [otp, setOtp] = useState(null);
   const [coords, setCoords] = useState(null);
   const [status, setStatus] = useState('Acquiring high-accuracy mobile GPS location...');
@@ -105,14 +102,13 @@ const MobileOtp = () => {
         await addDoc(collection(db, 'locations'), locationPayload);
 
         const latestOtp = await readLatestOtp();
-        setOtp(latestOtp || urlCode);
+        setOtp(latestOtp);
         setError(false);
         setStatus(
           'Mobile GPS location verified! Type this 4-digit OTP into your laptop browser to finish payment.'
         );
       } catch (err) {
         console.error('Error communicating with Firebase:', err);
-        if (urlCode) setOtp(urlCode);
         setError(true);
         setStatus('Failed to sync location with database.');
       }
@@ -155,7 +151,7 @@ const MobileOtp = () => {
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
-  }, [urlCode]);
+  }, []);
 
   return (
     <Container>
